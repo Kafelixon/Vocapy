@@ -7,7 +7,7 @@ ScriptVocab is a Python application designed to help language learners boost the
 ### Prerequisites
 
 - Python 3.8 or higher
-- Libraries: `re`, `sys`, `translators`, `collections.Counter`
+- Libraries: `re`, `translators`, `collections.Counter`
 
 ### Installing
 
@@ -17,7 +17,7 @@ git clone https://github.com/Kafelixon/ScriptVocab.git
 ```
 2. Install required Python packages
 ```
-pip install -r requirements.txt
+pip install translators
 ```
 
 ### Usage

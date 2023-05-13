@@ -1,6 +1,5 @@
 import argparse
 import re
-import sys
 import translators as ts
 from collections import Counter
 
