@@ -13,7 +13,7 @@ ScriptVocab is a Python application designed to help language learners boost the
 
 1. Clone the repository
 ```
-git clone https://github.com/<username>/ScriptVocab.git
+git clone https://github.com/Kafelixon/ScriptVocab.git
 ```
 2. Install required Python packages
 ```
@@ -22,9 +22,12 @@ pip install -r requirements.txt
 
 ### Usage
 
+Simple usage:
 ```
-python3 ScriptVocab.py [-h] [-s SUBS_LANGUAGE] [-t TARGET_LANGUAGE] [-e ENCODING] filename
-
+python3 ScriptVocab.py filename
+```
+Additional help:
+```
 positional arguments:
   filename              The name of the text file to process.
 
@@ -40,6 +43,7 @@ optional arguments:
                         The minimum times a word should appear to be included. Default is 4.
   -e ENCODING, --encoding ENCODING
                         The encoding of the text file. Default is 'utf-8'. If you see a lot of [?]s replacing characters, try 'cp1252'.```
+```
 
 ## Authors
 
