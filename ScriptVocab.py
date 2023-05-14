@@ -6,13 +6,17 @@ from collections import Counter
 
 def is_time_stamp(line: str) -> bool:
     """
-    Checks if a line starts with a timestamp.
+    Checks if the given line starts with a timestamp.
+
+    A timestamp is defined as a string at the start of the line in the format 'HH:MM:SS,MS', 
+    where HH represents hours, MM represents minutes, SS represents seconds, and MS represents milliseconds.
 
     Args: line (str): The line to check.
 
     Returns: bool: True if the line starts with a timestamp, False otherwise.
     """
-    return line[:2].isnumeric() and line[2] == ':'
+    pattern = r'^\d{1,2}:\d{2}:\d{2},\d{3}'
+    return bool(re.match(pattern, line))
 
 
 def has_letters(line: str) -> bool:
@@ -49,7 +53,7 @@ def is_lowercase_letter_or_comma(char: str) -> bool:
     return char.isalpha() and char.lower() == char or char == ','
 
 
-def clean_up(lines: list) -> list:
+def clean_up(lines: list[str]) -> list[str]:
     """
     Cleans up a list of lines by removing non-text lines and combining text broken into multiple lines.
 
@@ -63,14 +67,14 @@ def clean_up(lines: list) -> list:
             continue
         elif new_lines and is_lowercase_letter_or_comma(line[0]):
             # combine with previous line
-            new_lines[-1] = new_lines[-1].strip() + ' ' + line
+            new_lines[-1] = f"{new_lines[-1].strip()} {line}"
         else:
             # append line
             new_lines.append(re.sub('<.*?>', '', line))
     return new_lines
 
 
-def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) -> dict:
+def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) -> dict[str, str]:
     """
     Translates the keys of a dictionary from Spanish to a specified language 
     using a translation service. The translated words become the values in 
@@ -84,11 +88,11 @@ def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) ->
     Returns:
         dict: A dictionary with the original words as keys and translated words as values.
     """
-    words = list(input_dict.keys())
-    text = "\n".join(words)
+    words: list[str] = list(input_dict.keys())
+    text: str = "\n".join(words)
 
     try:
-        output = ts.translate_text(
+        output: str = ts.translate_text(
             text,
             translator='bing',
             from_language=input_lang,
@@ -98,14 +102,11 @@ def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) ->
         print(f"Error: {e}")
         return {}
 
-    translated_words = output.split("\n")
-    translated_dict = {key: value for key,
-                       value in zip(words, translated_words)}
-
-    return translated_dict
+    translated_words: list[str] = output.split("\n")
+    return {key: value for key, value in zip(words, translated_words)}
 
 
-def create_dictionary(words: list, min_appearance: int) -> dict:
+def create_dictionary(words: list, min_appearance: int) -> dict[str, int]:
     """
     Creates a dictionary from a list of words. Each unique word that appears 
     at least a certain number of times in the list becomes a key in the dictionary. 
@@ -122,7 +123,7 @@ def create_dictionary(words: list, min_appearance: int) -> dict:
         in descending order by count.
     """
     # Count word occurrences
-    word_counts = Counter(words)
+    word_counts: dict[str, int] = Counter(words)
 
     # Filter words that appear at least min_appearance times
     word_counts = {
@@ -131,11 +132,36 @@ def create_dictionary(words: list, min_appearance: int) -> dict:
         if count >= min_appearance
     }
 
-    # Sort the dictionary by count in descending order
-    words_dict = dict(sorted(word_counts.items(),
-                      key=lambda item: item[1], reverse=True))
+    # Return sorted dictionary by count in descending order
+    return dict(sorted(word_counts.items(), key=lambda item: item[1], reverse=True))
 
-    return words_dict
+
+def create_word_list_from_text(text: str) -> list[str]:
+    """
+    Extracts words from the given text and returns them as a list.
+
+    Words are defined as sequences of alphanumeric characters. Non-word 
+    lines (e.g. timestamps, lines with no alphabetic characters) are ignored.
+
+    Args: text (str): The text to extract words from.
+
+    Returns: list[str]: The list of words extracted from the text.
+    """
+    # Use list comprehension to generate the word list directly
+    return [word for word in re.findall(r'\b\w+\b', text) if not has_no_text(word)]
+
+
+def make_output_filename(filename: str, output_extension: str) -> str:
+    """
+    Creates an output filename by removing the original extension and 
+    appending a new one.
+
+    Args: filename (str): The original filename. output_extension (str): The new extension to append.
+
+    Returns: str: The output filename.
+    """
+    # Strip the extension, add the prefix and the new extension
+    return f"Dictionary [{filename.rsplit('.', 1)[0]}].{output_extension}"
 
 
 def main():
@@ -164,37 +190,29 @@ def main():
     # Parse the arguments
     args = parser.parse_args()
 
-    file_name = args.filename
-    subs_language = args.subs_language
-    target_language = args.target_language
-    output_extension = args.output_extension
-    min_appearance = args.min_appearance
-    file_encoding = args.encoding
+    # Open and read the file
+    with open(args.filename, encoding=args.encoding, errors='replace') as f:
+        lines: list[str] = f.readlines()
 
-    # Open, read and clean up the file
-    with open(file_name, encoding=file_encoding, errors='replace') as f:
-        lines = f.readlines()
-    new_lines = clean_up(lines)
+    # Combine cleaned lines into a single, lowercase string for easier text processing
+    text: str = ' '.join(clean_up(lines)).lower()
 
-    # Join the cleaned up lines into a single string
-    text = ' '.join(new_lines)
-
-    # Convert the text to lowercase and split it into words
-    text = text.lower()
-    words = re.findall(r'\b\w+\b', text)
+    words = create_word_list_from_text(text)
 
     # Create a dictionary of word counts and translate the words
-    words_dict = create_dictionary(words, min_appearance)
+    words_dict = create_dictionary(words, args.min_appearance)
     translated_dict = translate_dictionary(
-        words_dict, subs_language, target_language)
+        words_dict, args.subs_language, args.target_language)
 
     # Write the word counts and translations to a new file
-    new_file_name = f"Dictionary [{file_name[:-4]}].{output_extension}"
-    with open(new_file_name, 'w') as f:
+    output_filename = make_output_filename(
+        args.filename, args.output_extension)
+    with open(output_filename, 'w') as f:
         f.write(f"Count, Word, Translation\n")
         for word in words_dict:
             count = str(words_dict[word])
-            f.write(f"{count}, {word}, {translated_dict[word]}\n")
+            translation: str = translated_dict.get(word, '')
+            f.write(f"{count}, {word}, {translation}\n")
 
 
 if __name__ == '__main__':

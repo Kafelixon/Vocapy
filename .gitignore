@@ -1,4 +1,5 @@
 *.srt
 *.txt
 *.csv
+*.html
 *.DS_Store
