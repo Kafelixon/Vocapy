@@ -12,10 +12,13 @@ ScriptVocab is a Python application designed to help language learners boost the
 ### Installing
 
 1. Clone the repository
+
 ```sh
 git clone https://github.com/Kafelixon/ScriptVocab.git
 ```
+
 2. Install required Python packages
+
 ```sh
 pip install translators
 ```
@@ -23,10 +26,13 @@ pip install translators
 ### Usage
 
 Simple usage:
+
 ```sh
 python3 ScriptVocab.py filename
 ```
+
 Additional help:
+
 ```sh
 positional arguments:
   filename              The name of the text file to process.
@@ -45,10 +51,10 @@ optional arguments:
                         The encoding of the text file. Default is 'utf-8'. If you see a lot of [?]s replacing characters, try 'cp1252'.```
 ```
 
-## Features to be added 
+## Features to be added
 
-- multiple subtitle files as input 
-- maybe GUI 
+- multiple subtitle files as input
+- maybe GUI
 
 ## Authors
 

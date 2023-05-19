@@ -1,7 +1,11 @@
 import argparse
+import glob
 import re
-import translators as ts
+import time
 from collections import Counter
+from pathlib import Path
+
+import translators as ts
 
 
 def is_time_stamp(line: str) -> bool:
@@ -74,7 +78,7 @@ def clean_up(lines: list[str]) -> list[str]:
     return new_lines
 
 
-def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) -> dict[str, str]:
+def translate_dictionary_old(input_dict: dict, input_lang: str, target_lang: str) -> dict[str, str]:
     """
     Translates the keys of a dictionary from Spanish to a specified language 
     using a translation service. The translated words become the values in 
@@ -104,6 +108,62 @@ def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) ->
 
     translated_words: list[str] = output.split("\n")
     return {key: value for key, value in zip(words, translated_words)}
+
+
+def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) -> dict[str, str]:
+    """
+    Translates the keys of a dictionary from Spanish to a specified language 
+    using a translation service. The translated words become the values in 
+    the returned dictionary.
+
+    Args:
+        input_dict (dict): The dictionary to translate. Only the keys are translated.
+        dest (str, optional): The destination language (ISO 639-1 code). 
+                              Defaults to "en" (English).
+
+    Returns:
+        dict: A dictionary with the original words as keys and translated words as values.
+    """
+
+    words: list[str] = list(input_dict.keys())
+    translated_dict = {}
+    chunk_size = 100
+    wait_time = 2
+    # Split words into chunks of chunk_size
+    for i in range(0, len(words), chunk_size):
+        if i>0:
+            print(f"Waiting {wait_time} seconds to avoid rate limiting...")
+            time.sleep(wait_time)
+        chunk = words[i:i+chunk_size]
+        text: str = "\n".join(chunk)
+        output: str = ""
+        print(
+            f"Translating chunk {i//chunk_size+1} of {len(words)//chunk_size+1}...")
+        for attempt in range(0,2):
+            print(f"Attempt {attempt+1}...")
+            try:
+                output = ts.translate_text(
+                    text,
+                    translator='bing',
+                    from_language=input_lang,
+                    to_language=target_lang
+                )
+                break
+            except Exception as e:
+                if attempt < 1:
+                    print(
+                        f"Translation failed. Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"Translation failed, error: {e}")
+                    
+
+        translated_words: list[str] = output.split("\n")
+        chunk_dict = {key: value for key,
+                      value in zip(chunk, translated_words)}
+        translated_dict.update(chunk_dict)
+        
+    return translated_dict
 
 
 def create_dictionary(words: list, min_appearance: int) -> dict[str, int]:
@@ -164,9 +224,24 @@ def make_output_filename(filename: str, output_extension: str) -> str:
     return f"Dictionary [{filename.rsplit('.', 1)[0]}].{output_extension}"
 
 
+def create_list_of_files_to_process(input_path: str, input_extension: str) -> list[str]:
+    path = Path(input_path)
+
+    # Create a list of files to process
+    if path.is_file():
+        filenames = [path]
+    elif path.is_dir():
+        filenames = glob.glob(f"{path}/*.{input_extension}")
+    else:
+        print(
+            f"Error: The path {path} does not exist or is not a file or directory.")
+        return
+    return filenames
+
+
 def main():
     """
-    The main function to clean up a text file, count the words, translate them, 
+    The main function to clean up a text files, count the words, translate them, 
     and write the results to a new file.
     """
 
@@ -175,13 +250,15 @@ def main():
 
     # Add arguments
     parser.add_argument(
-        "filename", help="The name of the text file to process.")
+        "path", help="The path to the text file or directory to process.")
     parser.add_argument("-s", "--subs_language", default='auto',
                         help="The language of the subtitles. Default is 'auto'.")
     parser.add_argument("-t", "--target_language", default='en',
                         help="The target language for the translation. Default is 'en'.")
-    parser.add_argument("-o", "--output_extension", default='txt',
-                        help="The extension for the output file. Default is 'txt'.")
+    parser.add_argument("-o", "--output", default='output.txt',
+                        help="The name for the output file. Default is 'output.txt'.")
+    parser.add_argument("-i", "--input_extension", default='txt',
+                        help="The extension of the input files to process. Default is 'txt'.")
     parser.add_argument("-m", "--min_appearance", type=int, default=4,
                         help="The minimum times a word should appear to be included. Default is 4.")
     parser.add_argument("-e", "--encoding", default='utf-8',
@@ -189,25 +266,32 @@ def main():
 
     # Parse the arguments
     args = parser.parse_args()
+    filenames = create_list_of_files_to_process(
+        args.path, args.input_extension)
 
-    # Open and read the file
-    with open(args.filename, encoding=args.encoding, errors='replace') as f:
-        lines: list[str] = f.readlines()
+    # Process each file in the list to create a dictionary of words
+    all_words: list[str] = []
+    print(f"Processing {len(filenames)} files...")
+    for filename in filenames:
+        with open(filename, encoding=args.encoding, errors='replace') as f:
+            lines: list[str] = f.readlines()
 
-    # Combine cleaned lines into a single, lowercase string for easier text processing
-    text: str = ' '.join(clean_up(lines)).lower()
+        text: str = ' '.join(clean_up(lines)).lower()
+        words = create_word_list_from_text(text)
+        print(f"Found {len(words)} words in {filename}")
+        all_words.extend(words)
+    print(f"Found {len(all_words)} words in total.")
 
-    words = create_word_list_from_text(text)
+    words_dict = create_dictionary(all_words, args.min_appearance)
+    print(
+        f"Found {len(words_dict)} unique words appearing at least {args.min_appearance} times.")
 
-    # Create a dictionary of word counts and translate the words
-    words_dict = create_dictionary(words, args.min_appearance)
+    # Translate the words
     translated_dict = translate_dictionary(
         words_dict, args.subs_language, args.target_language)
 
-    # Write the word counts and translations to a new file
-    output_filename = make_output_filename(
-        args.filename, args.output_extension)
-    with open(output_filename, 'w') as f:
+    # Write the results to a file
+    with open(args.output, 'w') as f:
         f.write(f"Count, Word, Translation\n")
         for word in words_dict:
             count = str(words_dict[word])
