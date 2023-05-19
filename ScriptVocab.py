@@ -131,7 +131,7 @@ def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) ->
     wait_time = 2
     # Split words into chunks of chunk_size
     for i in range(0, len(words), chunk_size):
-        if i>0:
+        if i > 0:
             print(f"Waiting {wait_time} seconds to avoid rate limiting...")
             time.sleep(wait_time)
         chunk = words[i:i+chunk_size]
@@ -139,7 +139,7 @@ def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) ->
         output: str = ""
         print(
             f"Translating chunk {i//chunk_size+1} of {len(words)//chunk_size+1}...")
-        for attempt in range(0,2):
+        for attempt in range(0, 2):
             print(f"Attempt {attempt+1}...")
             try:
                 output = ts.translate_text(
@@ -156,13 +156,12 @@ def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) ->
                     time.sleep(wait_time)
                 else:
                     print(f"Translation failed, error: {e}")
-                    
 
         translated_words: list[str] = output.split("\n")
         chunk_dict = {key: value for key,
                       value in zip(chunk, translated_words)}
         translated_dict.update(chunk_dict)
-        
+
     return translated_dict
 
 
@@ -196,7 +195,7 @@ def create_dictionary(words: list, min_appearance: int) -> dict[str, int]:
     return dict(sorted(word_counts.items(), key=lambda item: item[1], reverse=True))
 
 
-def create_word_list_from_text(text: str) -> list[str]:
+def create_word_list_from_text(text: str, min_word_size: int) -> list[str]:
     """
     Extracts words from the given text and returns them as a list.
 
@@ -208,7 +207,7 @@ def create_word_list_from_text(text: str) -> list[str]:
     Returns: list[str]: The list of words extracted from the text.
     """
     # Use list comprehension to generate the word list directly
-    return [word for word in re.findall(r'\b\w+\b', text) if not has_no_text(word)]
+    return [word for word in re.findall(r'\b\w+\b', text) if not has_no_text(word) and len(word) > min_word_size]
 
 
 def make_output_filename(filename: str, output_extension: str) -> str:
@@ -259,6 +258,8 @@ def main():
                         help="The name for the output file. Default is 'output.txt'.")
     parser.add_argument("-i", "--input_extension", default='txt',
                         help="The extension of the input files to process. Default is 'txt'.")
+    parser.add_argument("-w", "--min_word_size", type=int, default=1,
+                        help="Minimum word size to be included in the output.")
     parser.add_argument("-m", "--min_appearance", type=int, default=4,
                         help="The minimum times a word should appear to be included. Default is 4.")
     parser.add_argument("-e", "--encoding", default='utf-8',
@@ -277,7 +278,7 @@ def main():
             lines: list[str] = f.readlines()
 
         text: str = ' '.join(clean_up(lines)).lower()
-        words = create_word_list_from_text(text)
+        words = create_word_list_from_text(text, args.min_word_size)
         print(f"Found {len(words)} words in {filename}")
         all_words.extend(words)
     print(f"Found {len(all_words)} words in total.")
