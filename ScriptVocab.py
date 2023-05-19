@@ -78,91 +78,66 @@ def clean_up(lines: list[str]) -> list[str]:
     return new_lines
 
 
-def translate_dictionary_old(input_dict: dict, input_lang: str, target_lang: str) -> dict[str, str]:
-    """
-    Translates the keys of a dictionary from Spanish to a specified language 
-    using a translation service. The translated words become the values in 
-    the returned dictionary.
+def translate_chunk(chunk: list[str], input_lang: str, target_lang: str, wait_time: int = 2) -> list[str]:
+    output = ""
+    for attempt in range(2):
+        print(f"Attempt {attempt + 1}...")
+        try:
+            output = ts.translate_text(
+                "\n".join(chunk),
+                translator='bing',
+                from_language=input_lang,
+                to_language=target_lang
+            )
+            break
+        except Exception as e:
+            if attempt < 1:
+                print(
+                    f"Translation failed. Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                raise Exception(
+                    f"Translation failed, error: {e}\nTry again later.")
 
-    Args:
-        input_dict (dict): The dictionary to translate. Only the keys are translated.
-        dest (str, optional): The destination language (ISO 639-1 code). 
-                              Defaults to "en" (English).
-
-    Returns:
-        dict: A dictionary with the original words as keys and translated words as values.
-    """
-    words: list[str] = list(input_dict.keys())
-    text: str = "\n".join(words)
-
-    try:
-        output: str = ts.translate_text(
-            text,
-            translator='bing',
-            from_language=input_lang,
-            to_language=target_lang
-        )
-    except Exception as e:
-        print(f"Error: {e}")
-        return {}
-
-    translated_words: list[str] = output.split("\n")
-    return {key: value for key, value in zip(words, translated_words)}
+    return output.split("\n")
 
 
 def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) -> dict[str, str]:
     """
-    Translates the keys of a dictionary from Spanish to a specified language 
+    Translates the keys of a dictionary from input_lang to target_lang
     using a translation service. The translated words become the values in 
     the returned dictionary.
 
     Args:
         input_dict (dict): The dictionary to translate. Only the keys are translated.
-        dest (str, optional): The destination language (ISO 639-1 code). 
-                              Defaults to "en" (English).
+        input_lang (str): The input language (ISO 639-1 code).
+        target_lang (str): The target language (ISO 639-1 code).
 
     Returns:
         dict: A dictionary with the original words as keys and translated words as values.
     """
-
-    words: list[str] = list(input_dict.keys())
+    words = list(input_dict.keys())
     translated_dict = {}
     chunk_size = 100
     wait_time = 2
-    # Split words into chunks of chunk_size
+
+    num_chunks = len(words) // chunk_size + 1
     for i in range(0, len(words), chunk_size):
         if i > 0:
             print(f"Waiting {wait_time} seconds to avoid rate limiting...")
             time.sleep(wait_time)
-        chunk = words[i:i+chunk_size]
-        text: str = "\n".join(chunk)
-        output: str = ""
-        print(
-            f"Translating chunk {i//chunk_size+1} of {len(words)//chunk_size+1}...")
-        for attempt in range(0, 2):
-            print(f"Attempt {attempt+1}...")
-            try:
-                output = ts.translate_text(
-                    text,
-                    translator='bing',
-                    from_language=input_lang,
-                    to_language=target_lang
-                )
-                break
-            except Exception as e:
-                if attempt < 1:
-                    print(
-                        f"Translation failed. Retrying in {wait_time} seconds...")
-                    time.sleep(wait_time)
-                else:
-                    print(f"Translation failed, error: {e}")
 
-        translated_words: list[str] = output.split("\n")
+        chunk = words[i:i+chunk_size]
+        print(f"Translating chunk {i // chunk_size + 1} of {num_chunks}...")
+
+        translated_words = translate_chunk(
+            chunk, input_lang, target_lang, wait_time)
         chunk_dict = {key: value for key,
                       value in zip(chunk, translated_words)}
         translated_dict.update(chunk_dict)
 
     return translated_dict
+
 
 
 def create_dictionary(words: list, min_appearance: int) -> dict[str, int]:
