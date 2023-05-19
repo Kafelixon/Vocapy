@@ -1,5 +1,7 @@
 *.srt
 *.txt
+!requirements.txt
 *.csv
 *.html
 *.DS_Store
+settings.json
