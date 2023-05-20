@@ -1,5 +1,7 @@
 # ScriptVocab
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/2233e96b9b9e45daa2aa65ab196cc36f)](https://app.codacy.com/gh/Kafelixon/ScriptVocab?utm_source=github.com&utm_medium=referral&utm_content=Kafelixon/ScriptVocab&utm_campaign=Badge_Grade)
+
 ScriptVocab is a Python application designed to help language learners boost their vocabulary before watching a movie or TV series. The application processes the script of the media, counts the frequency of each word, and translates the most used words from the script's original language to the learner's target language. The output is a handy vocabulary list to study, which can help learners understand more during the show.
 
 ## Getting Started
