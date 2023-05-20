@@ -1,5 +1,5 @@
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/7744bddf5a4b45ae918776a5137cd0ce)](https://www.codacy.com/gh/Kafelixon/ScriptVocab/dashboard?utm_source=github.com&utm_medium=referral&utm_content=Kafelixon/ScriptVocab&utm_campaign=Badge_Grade)
-[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/7744bddf5a4b45ae918776a5137cd0ce)](https://app.codacy.com/gh/Kafelixon/ScriptVocab/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/7744bddf5a4b45ae918776a5137cd0ce)](https://www.codacy.com/gh/Kafelixon/ScriptVocab/dashboard?utm_source=github.com\&utm_medium=referral\&utm_content=Kafelixon/ScriptVocab\&utm_campaign=Badge_Grade)
+[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/7744bddf5a4b45ae918776a5137cd0ce)](https://app.codacy.com/gh/Kafelixon/ScriptVocab/dashboard?utm_source=gh\&utm_medium=referral\&utm_content=\&utm_campaign=Badge_coverage)
 [![CodeFactor](https://www.codefactor.io/repository/github/kafelixon/webwatchnotify/badge)](https://www.codefactor.io/repository/github/kafelixon/webwatchnotify)
 
 # ScriptVocab
@@ -10,8 +10,8 @@ ScriptVocab is a Python application designed to help language learners boost the
 
 ### Prerequisites
 
--  Python 3.8 or higher
--  pip
+*   Python 3.8 or higher
+*   pip
 
 ### Installing
 
@@ -62,13 +62,13 @@ optional arguments:
 
 ## Features to be added
 
- [x] multiple subtitle files as input
- [] Add dictionary definitions to words in output
- [] GUI
+*   Add dictionary definitions to words in output
+
+*   GUI
 
 ## Authors
 
--  Peter Kafel
+*   Peter Kafel
 
 ## License
 
