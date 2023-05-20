@@ -38,12 +38,7 @@ jobs:
       run: |
         pip install pytest pytest-cov
         python -m pytest --cov=ScriptVocab --cov-report xml
-    - name: Coveralls
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: coverage.xml
-    - name: Run codacy-coverage-reporter
+    - name: Export Coverage to Codacy
       run: |
         export CODACY_PROJECT_TOKEN=${{ secrets.CODACY_PROJECT_TOKEN }}
         bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r coverage.xml
