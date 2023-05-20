@@ -268,7 +268,7 @@ def main():
 
     # Write the results to a file
     with open(args.output, 'w') as f:
-        f.write(f"Count, Word, Translation\n")
+        f.write("Count, Word, Translation\n")
         for word in words_dict:
             count = str(words_dict[word])
             translation: str = translated_dict.get(word, '')

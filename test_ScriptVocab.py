@@ -1,6 +1,6 @@
 import unittest
 from ScriptVocab import *
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import time
 
 
@@ -127,7 +127,6 @@ class TestScriptVocab(unittest.TestCase):
         test_dict = {"palabra1": 5, "palabra2": 3, "palabra3": 1}
         input_lang = 'es'
         target_lang = 'en'
-        
         result = translate_dictionary(test_dict, input_lang, target_lang)
 
         # The translate_text method should have been called twice because of the exception
