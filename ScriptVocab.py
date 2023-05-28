@@ -139,7 +139,6 @@ def translate_dictionary(input_dict: dict, input_lang: str, target_lang: str) ->
     return translated_dict
 
 
-
 def create_dictionary(words: list, min_appearance: int) -> dict[str, int]:
     """
     Creates a dictionary from a list of words. Each unique word that appears 
@@ -245,17 +244,11 @@ def main():
     filenames = create_list_of_files_to_process(
         args.path, args.input_extension)
 
-    # Process each file in the list to create a dictionary of words
-    all_words: list[str] = []
-    print(f"Processing {len(filenames)} files...")
-    for filename in filenames:
-        with open(filename, encoding=args.encoding, errors='replace') as f:
-            lines: list[str] = f.readlines()
+    print(ts.translators_pool())
 
-        text: str = ' '.join(clean_up(lines)).lower()
-        words = create_word_list_from_text(text, args.min_word_size)
-        print(f"Found {len(words)} words in {filename}")
-        all_words.extend(words)
+    # Process each file in the list to create a dictionary of words
+    all_words = process_files(
+        args.encoding, args.min_word_size, filenames)
     print(f"Found {len(all_words)} words in total.")
 
     words_dict = create_dictionary(all_words, args.min_appearance)
@@ -273,6 +266,21 @@ def main():
             count = str(words_dict[word])
             translation: str = translated_dict.get(word, '')
             f.write(f"{count}, {word}, {translation}\n")
+
+
+def process_files(encoding, min_word_size, filenames) -> list[str]:
+    all_words = []
+    print(f"Processing {len(filenames)} files...")
+    for filename in filenames:
+        with open(filename, encoding=encoding, errors='replace') as f:
+            lines: list[str] = f.readlines()
+
+        text: str = ' '.join(clean_up(lines)).lower()
+        words = create_word_list_from_text(text, min_word_size)
+        print(f"Found {len(words)} words in {filename}")
+        all_words.extend(words)
+
+    return all_words
 
 
 if __name__ == '__main__':
