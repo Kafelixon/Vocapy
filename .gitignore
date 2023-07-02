@@ -6,3 +6,4 @@
 *.DS_Store
 settings.json
 *coverage*
+__pycache__
