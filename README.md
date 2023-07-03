@@ -32,7 +32,7 @@ ScriptVocab is a Python application designed to help language learners boost the
 Simple usage:
 
 ```sh
-python3 ScriptVocab.py filename
+python3 -m cli.main filename
 ```
 
 Additional help:
@@ -64,7 +64,7 @@ optional arguments:
 
 *   Add dictionary definitions to words in output
 
-*   GUI
+*   Frontend for API
 
 ## Authors
 
