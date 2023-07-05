@@ -5,6 +5,7 @@ from collections import Counter
 from pathlib import Path
 import translators as ts
 
+CHUNK_SIZE = 100
 
 class scriptVocabConfig:
     def __init__(
@@ -23,19 +24,27 @@ class scriptVocabConfig:
 class ScriptVocab:
     def __init__(self, config: scriptVocabConfig):
         self.config = config
-        self.all_words = []
+        self.all_words: list[str] = []
+        self.output: list[str] = []
         print(vars(self.config))
 
+    def __enter__(self):
+        return self
+  
+    def __exit__(self, exc_type, exc_value, traceback):
+        print("Exiting")
+        self.dupa = 1
+
     def input_text(self, text: str):
-        text = text.lower()
         words = self.create_word_list_from_text(text, self.config.min_word_size)
         print(f"Found {len(words)} words in input text.")
         self.all_words.extend(words)
 
-    def input_files(self, path: Path, input_extension: str, encoding: str):
-        if path.is_file():
-            filenames = [path]
-        elif path.is_dir():
+    def input_files(self, path: str, input_extension: str, encoding: str):
+        path_obj = Path(path)
+        if path_obj.is_file():
+            filenames = [path_obj]
+        elif path_obj.is_dir():
             filenames = glob.glob(f"{path}/*.{input_extension}")
         else:
             raise FileNotFoundError(
@@ -43,17 +52,17 @@ class ScriptVocab:
             )
         self.process_files(filenames, encoding)
 
-    def process_files(self, filenames, encoding):
-        print(f"Processing {len(filenames)} files...")
-        for filename in filenames:
-            with open(filename, encoding=encoding, errors="replace") as f:
+    def process_files(self, file_paths, encoding):
+        for file_path in file_paths:
+            with open(file_path, "r", encoding=encoding) as f:
                 lines = f.readlines()
-            text = " ".join(self.clean_up(lines)).lower()
-            print(text)
-            words = self.create_word_list_from_text(text, self.config.min_word_size)
-            print(f"Found {len(words)} words in {filename}")
-            self.all_words.extend(words)
-        print(f"Found {len(self.all_words)} words in total.")
+                print(f"Lines: {lines}")
+                cleaned_lines = self.clean_up(lines)
+                print(f"Cleaned lines: {cleaned_lines}")
+                for line in cleaned_lines:
+                    words = self.create_word_list_from_text(line, self.config.min_word_size)
+                    print(f"Words: {words}")
+                    self.all_words.extend(words)
 
     def has_no_text(self, line) -> bool:
         line = line.strip()
@@ -66,58 +75,52 @@ class ScriptVocab:
         return char.isalpha() and char.lower() == char or char == ","
 
     def clean_up(self, lines):
-        new_lines = [
-            re.sub("<.*?>", "", line)
-            for line in lines[1:]
+        cleaner_lines = [
+            re.sub("<.*?>", "", line).rstrip()
+            for line in lines
             if not self.has_no_text(line)
         ]
-        for i in range(1, len(new_lines)):
-            if self.is_lowercase_letter_or_comma(new_lines[i][0]):
-                new_lines[i - 1] += " " + new_lines.pop(i)
-        return new_lines
+        for i in range(1, len(cleaner_lines)):
+            if self.is_lowercase_letter_or_comma(cleaner_lines[i][0]):
+                cleaner_lines[i - 1] += " " + cleaner_lines.pop(i)
+        return cleaner_lines
 
     def create_word_list_from_text(self, text, min_word_size):
         return [
-            word
+            word.lower()
             for word in re.findall(r"\b\w+\b", text)
-            if not self.has_no_text(word) and len(word) > min_word_size
+            if not self.has_no_text(word) and len(word) >= min_word_size
         ]
 
-    def translate_chunk(self, chunk, input_lang, target_lang, wait_time=2):
+    def translate_chunk(self, chunk, input_lang, target_lang, wait_time=2) -> list[str]:
+        translated_chunk = []
         for attempt in range(2):
             print(f"Attempt {attempt + 1}...")
             try:
-                return ts.translate_text(
+                translated_chunk = str(ts.translate_text(
                     "\n".join(chunk),
                     translator="bing",
                     from_language=input_lang,
                     to_language=target_lang,
-                ).split("\n")
+                )).split("\n")
             except Exception as e:
                 if attempt < 1:
                     print(f"Translation failed. Retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
                 else:
                     raise Exception(f"Translation failed, error: {e}\nTry again later.")
+        return translated_chunk
 
-    def translate_dictionary(self, dictionary, source_language, target_language):
-        words = list(dictionary.keys())
-        translated_dict = {}
-        chunk_size = 100
-        wait_time = 2
+    def chunks(self, list:list[str], chunk_size:int):
+        for i in range(0, len(list), chunk_size):
+            yield list[i : i + chunk_size]
 
-        num_chunks = len(words) // chunk_size + 1
-        for i in range(0, len(words), chunk_size):
-            if i > 0:
-                print(f"Waiting {wait_time} seconds to avoid rate limiting...")
-                time.sleep(wait_time)
-            chunk = words[i : i + chunk_size]
-            print(f"Translating chunk {i // chunk_size + 1} of {num_chunks}...")
-            translated_words = self.translate_chunk(
-                chunk, source_language, target_language, wait_time
-            )
+    def translate_dictionary(self, dictionary: dict[str,int], source_language, target_language, chunk_size):
+        translated_dict: dict[str,str] = {}
+        for chunk in self.chunks(list(dictionary.keys()), chunk_size):
+            translated_words = self.translate_chunk(chunk, source_language, target_language)
             translated_dict.update(dict(zip(chunk, translated_words)))
-
+            time.sleep(2)  # rate limiter
         return translated_dict
 
     def create_dictionary(self, words, min_appearance):
@@ -128,22 +131,40 @@ class ScriptVocab:
         return dict(sorted(word_counts.items(), key=lambda item: item[1], reverse=True))
 
     def run(self):
-        words_dict = self.create_dictionary(self.all_words, self.config.min_appearance)
-        print(
-            f"Found {len(words_dict)} unique words appearing at least {self.config.min_appearance} times."
-        )
+        words_dict: dict[str,int] = self.create_dictionary(self.all_words, self.config.min_appearance)
+        print(f"Found {len(words_dict)} unique words")
 
         translated_dict = self.translate_dictionary(
-            words_dict, self.config.subs_language, self.config.target_language
+            words_dict, self.config.subs_language, self.config.target_language, CHUNK_SIZE
         )
 
-        self.output = []
         for word, count in words_dict.items():
             translation = translated_dict.get(word, "")
             self.output.append(f"{count}, {word}, {translation}")
 
     def save_output_to_file(self, output_file):
         with open(output_file, "w") as f:
-            f.write("Count, Word, Translation\n")
-            for line in self.output:
-                f.write(line + "\n")
+            if len(self.output) > 0:
+                f.write("Count, Word, Translation\n")
+                for line in self.output:
+                    f.write(line + "\n")
+    
+    def get_output_as_json(self):
+        response = []
+        for line in self.output:
+            line_items = line.split(",")
+            if len(line_items) != 3:
+                print(f"Error occurred while parsing output: Invalid number of items in line: {line}")
+                return None
+
+            occurrences = line_items[0].strip()
+            original_text = line_items[1].strip()
+            translated_text = line_items[2].strip()
+
+            obj = {
+                "occurrences": occurrences,
+                "original_text": original_text,
+                "translated_text": translated_text,
+            }
+            response.append(obj)
+        return response
