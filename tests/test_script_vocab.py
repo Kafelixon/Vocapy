@@ -4,7 +4,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 import builtins
-import translators
 
 from script_vocab import ScriptVocab, scriptVocabConfig
 
@@ -26,7 +25,7 @@ class TestScriptVocab(unittest.TestCase):
         os.rmdir(TEMP_TEST_DIR)
 
     def test_enter_and_exit(self):
-        with patch.object(builtins, 'print') as mock_print:  
+        with patch.object(builtins, 'print') as mock_print:
             with ScriptVocab(scriptVocabConfig()) as test_sv:
                 self.assertIsInstance(test_sv, ScriptVocab)
         mock_print.assert_any_call('Exiting')
@@ -237,85 +236,15 @@ class TestScriptVocab(unittest.TestCase):
         self.sv.save_output_to_file(TEMP_TEST_FILE_SAVE)
         with open(TEMP_TEST_FILE_SAVE, 'r') as f:
             self.assertEqual(f.read().strip(), '')
-    
+
     def test_get_output_as_json(self):
         self.sv.output = ['5, palabra1, word1']
         self.assertEqual(self.sv.get_output_as_json(), [{'occurrences': '5', 'original_text': 'palabra1', 'translated_text': 'word1'}])
-    
+
     def test_get_output_as_json_when_output_is_empty(self):
         self.sv.output = ['']
         self.assertEqual(self.sv.get_output_as_json(), None)
-    
+
     def test_get_output_as_json_when_output_has_invalid_data(self):
         self.sv.output = ['12,notTranslatedWord']
         self.assertEqual(self.sv.get_output_as_json(), None)
-    
-
-
-
-
-
-    # @patch('translators.translate_text')
-    # @patch('time.sleep')
-    # def test_translate_dictionary_old(self, sleep_mock, translate_mock):
-    #     translate_mock.return_value = "word1\nword2\nword3"
-
-    #     test_dict = {"palabra1": 5, "palabra2": 3, "palabra3": 1}
-    #     input_lang = 'es'
-    #     target_lang = 'en'
-
-    #     result = self.sv.translate_dictionary(
-    #         test_dict, input_lang, target_lang)
-
-    #     translate_mock.assert_called_with(
-    #         "\n".join(test_dict.keys()),
-    #         translator='bing',
-    #         from_language=input_lang,
-    #         to_language=target_lang
-    #     )
-
-    #     expected_result = {"palabra1": "word1",
-    #                        "palabra2": "word2", "palabra3": "word3"}
-    #     self.assertEqual(result, expected_result)
-    #     self.assertEqual(sleep_mock.call_count, 0)
-
-    # @patch('translators.translate_text')
-    # @patch('time.sleep')
-    # def test_translate_dictionary_with_exception(self, sleep_mock, translate_mock):
-    #     translate_mock.side_effect = [
-    #         Exception('Test exception'), "word1\nword2\nword3"]
-
-    #     test_dict = {"palabra1": 5, "palabra2": 3, "palabra3": 1}
-    #     input_lang = 'es'
-    #     target_lang = 'en'
-    #     result = self.sv.translate_dictionary(
-    #         test_dict, input_lang, target_lang)
-
-    #     self.assertEqual(translate_mock.call_count, 2)
-    #     self.assertEqual(sleep_mock.call_count, 1)
-
-    #     expected_result = {"palabra1": "word1",
-    #                        "palabra2": "word2", "palabra3": "word3"}
-    #     self.assertEqual(result, expected_result)
-
-    # @patch('translators.translate_text')
-    # @patch('time.sleep')
-    # def test_translate_dictionary_with_persistent_exception(self, sleep_mock, translate_mock):
-    #     # Simulate an exception on both calls
-    #     translate_mock.side_effect = Exception('Test exception')
-
-    #     test_dict = {"palabra1": 5, "palabra2": 3, "palabra3": 1}
-    #     input_lang = 'es'
-    #     target_lang = 'en'
-
-    #     with self.assertRaises(Exception):
-    #         self.sv.translate_dictionary(test_dict, input_lang, target_lang)
-
-    #     # The translate_text method should have been called twice because of the exception
-    #     self.assertEqual(translate_mock.call_count, 2)
-
-    #     # Check that the sleep function was called twice before the second attempt
-    #     self.assertEqual(sleep_mock.call_count, 1)
-
-if __name__ == '__main__':
-    unittest.main()

@@ -26,14 +26,12 @@ class ScriptVocab:
         self.config = config
         self.all_words: list[str] = []
         self.output: list[str] = []
-        print(vars(self.config))
 
     def __enter__(self):
         return self
-  
+
     def __exit__(self, exc_type, exc_value, traceback):
         print("Exiting")
-        self.dupa = 1
 
     def input_text(self, text: str):
         words = self.create_word_list_from_text(text, self.config.min_word_size)
@@ -56,12 +54,9 @@ class ScriptVocab:
         for file_path in file_paths:
             with open(file_path, "r", encoding=encoding) as f:
                 lines = f.readlines()
-                print(f"Lines: {lines}")
                 cleaned_lines = self.clean_up(lines)
-                print(f"Cleaned lines: {cleaned_lines}")
                 for line in cleaned_lines:
                     words = self.create_word_list_from_text(line, self.config.min_word_size)
-                    print(f"Words: {words}")
                     self.all_words.extend(words)
 
     def has_no_text(self, line) -> bool:
@@ -111,13 +106,14 @@ class ScriptVocab:
                     raise Exception(f"Translation failed, error: {e}\nTry again later.")
         return translated_chunk
 
-    def chunks(self, list:list[str], chunk_size:int):
+    def convert_to_chunks(self, list:list[str], chunk_size:int):
         for i in range(0, len(list), chunk_size):
             yield list[i : i + chunk_size]
 
     def translate_dictionary(self, dictionary: dict[str,int], source_language, target_language, chunk_size):
         translated_dict: dict[str,str] = {}
-        for chunk in self.chunks(list(dictionary.keys()), chunk_size):
+        chunks = self.convert_to_chunks(list(dictionary.keys()), chunk_size)
+        for chunk in chunks:
             translated_words = self.translate_chunk(chunk, source_language, target_language)
             translated_dict.update(dict(zip(chunk, translated_words)))
             time.sleep(2)  # rate limiter
@@ -148,7 +144,8 @@ class ScriptVocab:
                 f.write("Count, Word, Translation\n")
                 for line in self.output:
                     f.write(line + "\n")
-    
+        print(f"Output saved to {output_file}")
+
     def get_output_as_json(self):
         response = []
         for line in self.output:

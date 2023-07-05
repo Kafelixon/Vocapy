@@ -15,5 +15,4 @@ async def translate_text(text: str):
         script_vocab.input_text(text)
         script_vocab.run()
         response = script_vocab.get_output_as_json()
-    
     return JSONResponse(content=response, media_type="application/json; charset=utf-8")
