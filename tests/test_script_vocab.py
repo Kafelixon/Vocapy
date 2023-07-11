@@ -94,6 +94,17 @@ class TestScriptVocab(unittest.TestCase):
         self.assertEqual(cleaned_lines[0], "This is a test.")
         self.assertEqual(cleaned_lines[1], "This is a test.")
 
+    def test_clean_up_text_with_different_alphabet(self):
+        lines = [
+            "<i>こんにちわ.</i>\n",
+            "This is a\n",
+            "test.\n",
+        ]
+        cleaned_lines = self.sv.clean_up(lines)
+        self.assertEqual(len(cleaned_lines), 2)
+        self.assertEqual(cleaned_lines[0], "こんにちわ.")
+        self.assertEqual(cleaned_lines[1], "This is a test.")
+
     def test_create_word_list_from_text(self):
         text = "This is a test."
         words = self.sv.create_word_list_from_text(text, 1)
@@ -112,6 +123,11 @@ class TestScriptVocab(unittest.TestCase):
         text = "word 1234 1234567890 w1rd sad"
         expected = ['word', 'w1rd']
         self.assertEqual(self.sv.create_word_list_from_text(text, 4), expected)
+
+    def test_create_word_list_from_text_with_different_alphabet(self):
+        text = "こんにちわ."
+        expected = ['こんにちわ']
+        self.assertEqual(self.sv.create_word_list_from_text(text, 1), expected)
 
     def test_create_dictionary(self):
         words = ['test', 'test', 'example', 'example', 'example']
