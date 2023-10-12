@@ -1,5 +1,5 @@
 import argparse
-from script_vocab.script_vocab import ScriptVocab, scriptVocabConfig
+from script_vocab.script_vocab import ScriptVocab, ScriptVocabConfig
 
 
 def main():
@@ -54,7 +54,7 @@ def main():
     )
 
     args = parser.parse_args()
-    script_vocab_config = scriptVocabConfig(
+    script_vocab_config = ScriptVocabConfig(
         subs_language=args.subs_language,
         target_language=args.target_language,
         min_word_size=args.min_word_size,

@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 import builtins
 
-from script_vocab import ScriptVocab, scriptVocabConfig
+from script_vocab import ScriptVocab, ScriptVocabConfig
 
 TEMP_TEST_DIR = "/tmp/dir/"
 TEMP_TEST_FILE_LOAD = TEMP_TEST_DIR + "test_load.txt"
@@ -14,9 +14,9 @@ TEMP_TEST_FILE_SAVE = TEMP_TEST_DIR + "test_save.txt"
 class TestScriptVocab(unittest.TestCase):
     def setUp(self):
         os.makedirs(TEMP_TEST_DIR, exist_ok=True)
-        Path(TEMP_TEST_FILE_LOAD).write_text("This is a test.")
+        Path(TEMP_TEST_FILE_LOAD).write_text("This is a test.", encoding="UTF-8")
 
-        self.config = scriptVocabConfig()
+        self.config = ScriptVocabConfig()
         self.sv = ScriptVocab(self.config)
 
     def tearDown(self):
@@ -26,7 +26,7 @@ class TestScriptVocab(unittest.TestCase):
 
     def test_enter_and_exit(self):
         with patch.object(builtins, "print") as mock_print:
-            with ScriptVocab(scriptVocabConfig()) as test_sv:
+            with ScriptVocab(ScriptVocabConfig()) as test_sv:
                 self.assertIsInstance(test_sv, ScriptVocab)
         mock_print.assert_any_call("Exiting")
 
@@ -94,7 +94,9 @@ class TestScriptVocab(unittest.TestCase):
         self.assertEqual(cleaned_lines[0], "This is a test.")
         self.assertEqual(cleaned_lines[1], "This is a test.")
 
-    @unittest.skip("Skipping as implementation for different alphabets is not done yet.")
+    @unittest.skip(
+        "Skipping as implementation for different alphabets is not done yet."
+    )
     def test_clean_up_text_with_different_alphabet(self):
         lines = [
             "<i>こんにちわ.</i>\n",
@@ -125,7 +127,9 @@ class TestScriptVocab(unittest.TestCase):
         expected = ["word", "w1rd"]
         self.assertEqual(self.sv.create_word_list_from_text(text, 4), expected)
 
-    @unittest.skip("Skipping as implementation for different alphabets is not done yet.")
+    @unittest.skip(
+        "Skipping as implementation for different alphabets is not done yet."
+    )
     def test_create_word_list_from_text_with_different_alphabet(self):
         text = "こんにちわ."
         expected = ["こんにちわ"]
@@ -174,7 +178,11 @@ class TestScriptVocab(unittest.TestCase):
         target_lang = "en"
 
         self.assertRaises(
-            Exception, self.sv.translate_chunk, chunk, input_lang, target_lang
+            ScriptVocab.ExternalTranslationError,
+            self.sv.translate_chunk,
+            chunk,
+            input_lang,
+            target_lang,
         )
         mock_translate_text.assert_called_with(
             "\n".join(chunk),

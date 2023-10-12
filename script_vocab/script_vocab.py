@@ -8,7 +8,7 @@ from pathlib import Path
 CHUNK_SIZE = 100
 
 
-class scriptVocabConfig:
+class ScriptVocabConfig:
     def __init__(
         self,
         subs_language="auto",
@@ -23,11 +23,11 @@ class scriptVocabConfig:
 
 
 class ScriptVocab:
-    def __init__(self, config: scriptVocabConfig):
+    def __init__(self, config: ScriptVocabConfig):
         self.config = config
         self.all_words: list[str] = []
         self.output: list[str] = []
-        self._translators = None
+        self._translators_imported: bool = False
 
     def __enter__(self):
         return self
@@ -35,7 +35,7 @@ class ScriptVocab:
     def __exit__(self, exc_type, exc_value, traceback):
         print("Exiting")
 
-    def isInternetAvailable(self):
+    def is_internet_available(self):
         try:
             sock = socket.create_connection(("www.google.com", 80))
             if sock is not None:
@@ -43,6 +43,7 @@ class ScriptVocab:
             return True
         except OSError:
             pass
+        print("isInternetAvailable failed")
         return False
 
     def input_text(self, text: str):
@@ -107,33 +108,32 @@ class ScriptVocab:
             try:
                 translated_chunk = self.translate_text(chunk, input_lang, target_lang)
                 break
-            except Exception as e:
+            except ScriptVocab.ExternalTranslationError as e:
                 if attempt < 1:
                     print(f"Translation failed. Retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
                 else:
-                    raise Exception(
+                    raise ScriptVocab.ExternalTranslationError(
                         f"Translation failed, error: {e}\nTry again later."
                     ) from e
         return translated_chunk
 
     def translate_text(self, chunk: list, input_lang, target_lang):
         translated_chunk = []
-        if self.isInternetAvailable():
-            if not hasattr(self, "_translators"):
+        if self.is_internet_available():
+            if not self._translators_imported:
                 # Try to import the module only once
                 try:
                     import translators as ts  # pylint: disable=import-outside-toplevel
-
-                    self._translators = ts
+                    self._translators_imported = True
                 except ImportError:
-                    self._translators = None
+                    self._translators_imported = False
                     print("Failed to import translators module.")
-            if self._translators:
+            if self._translators_imported:
                 try:
                     print("here")
                     translated_chunk = str(
-                        self._translators.translate_text(
+                        ts.translate_text(
                             "\n".join(chunk),
                             translator="bing",
                             from_language=input_lang,
@@ -141,16 +141,15 @@ class ScriptVocab:
                         )
                     ).split("\n")
                     return translated_chunk
-                except ts.TranslatorError as e:
-                    print("Catched error:", e)
-
+                except Exception as e:
+                    raise ScriptVocab.ExternalTranslationError("Translation failed") from e
         print("You are offline, using offline translation")
         for _ in chunk:
             translated_chunk.append("placeholder")
         return translated_chunk
 
-    def convert_to_chunks(self, list: list[str], chunk_size: int) -> list[list[str]]:
-        return [list[i : i + chunk_size] for i in range(0, len(list), chunk_size)]
+    def convert_to_chunks(self, words_list: list[str], chunk_size: int) -> list[list[str]]:
+        return [words_list[i : i + chunk_size] for i in range(0, len(words_list), chunk_size)]
 
     def translate_dictionary(
         self, dictionary: dict[str, int], source_language, target_language, chunk_size
@@ -191,7 +190,7 @@ class ScriptVocab:
             self.output.append(f"{count}, {word}, {translation}")
 
     def save_output_to_file(self, output_file):
-        with open(output_file, "w") as f:
+        with open(output_file, "w", encoding="UTF-8") as f:
             if len(self.output) > 0:
                 f.write("Count, Word, Translation\n")
                 for line in self.output:
@@ -217,3 +216,6 @@ class ScriptVocab:
             }
             response.append(obj)
         return response
+
+    class ExternalTranslationError(Exception):
+        pass

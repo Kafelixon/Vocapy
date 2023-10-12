@@ -4,7 +4,7 @@ from fastapi import FastAPI, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from script_vocab.script_vocab import ScriptVocab, scriptVocabConfig
+from script_vocab.script_vocab import ScriptVocab, ScriptVocabConfig
 
 app = FastAPI()
 
@@ -26,7 +26,7 @@ async def translate_text(
     min_word_size: Annotated[int, Form()] = 2,
     min_appearance: Annotated[int, Form()] = 1
 ):
-    config = scriptVocabConfig(
+    config = ScriptVocabConfig(
         subs_language=subs_language,
         target_language=target_language,
         min_word_size=min_word_size,
@@ -40,7 +40,7 @@ async def translate_text(
         raise ValueError("No text or file provided")
     return process_text(config, text)
 
-def process_text(config: scriptVocabConfig, text: str):
+def process_text(config: ScriptVocabConfig, text: str):
     with ScriptVocab(config) as script_vocab:
         script_vocab.input_text(text)
         print("Running script", script_vocab.all_words)
