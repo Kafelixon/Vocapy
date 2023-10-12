@@ -27,6 +27,7 @@ class ScriptVocab:
         self.config = config
         self.all_words: list[str] = []
         self.output: list[str] = []
+        self._translators = None
 
     def __enter__(self):
         return self
@@ -38,7 +39,7 @@ class ScriptVocab:
         try:
             sock = socket.create_connection(("www.google.com", 80))
             if sock is not None:
-                sock.close
+                sock.close()
             return True
         except OSError:
             pass
@@ -111,25 +112,38 @@ class ScriptVocab:
                     print(f"Translation failed. Retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
                 else:
-                    raise Exception(f"Translation failed, error: {e}\nTry again later.")
+                    raise Exception(
+                        f"Translation failed, error: {e}\nTry again later."
+                    ) from e
         return translated_chunk
 
     def translate_text(self, chunk: list, input_lang, target_lang):
         translated_chunk = []
         if self.isInternetAvailable():
-            try:
-                import translators as ts
-                translated_chunk = str(
-                    ts.translate_text(
-                        "\n".join(chunk),
-                        translator="bing",
-                        from_language=input_lang,
-                        to_language=target_lang,
-                    )
-                ).split("\n")
-                return translated_chunk
-            except Exception:
-                pass
+            if not hasattr(self, "_translators"):
+                # Try to import the module only once
+                try:
+                    import translators as ts  # pylint: disable=import-outside-toplevel
+
+                    self._translators = ts
+                except ImportError:
+                    self._translators = None
+                    print("Failed to import translators module.")
+            if self._translators:
+                try:
+                    print("here")
+                    translated_chunk = str(
+                        self._translators.translate_text(
+                            "\n".join(chunk),
+                            translator="bing",
+                            from_language=input_lang,
+                            to_language=target_lang,
+                        )
+                    ).split("\n")
+                    return translated_chunk
+                except ts.TranslatorError as e:
+                    print("Catched error:", e)
+
         print("You are offline, using offline translation")
         for _ in chunk:
             translated_chunk.append("placeholder")
