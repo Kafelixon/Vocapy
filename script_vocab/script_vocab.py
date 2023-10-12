@@ -1,13 +1,14 @@
 import glob
 import re
+import socket
 import time
 from collections import Counter
 from pathlib import Path
-import translators as ts
 
 CHUNK_SIZE = 100
 
-class scriptVocabConfig:
+
+class ScriptVocabConfig:
     def __init__(
         self,
         subs_language="auto",
@@ -22,16 +23,28 @@ class scriptVocabConfig:
 
 
 class ScriptVocab:
-    def __init__(self, config: scriptVocabConfig):
+    def __init__(self, config: ScriptVocabConfig):
         self.config = config
         self.all_words: list[str] = []
         self.output: list[str] = []
+        self._translators_imported: bool = False
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         print("Exiting")
+
+    def is_internet_available(self):
+        try:
+            sock = socket.create_connection(("www.google.com", 80))
+            if sock is not None:
+                sock.close()
+            return True
+        except OSError:
+            pass
+        print("isInternetAvailable failed")
+        return False
 
     def input_text(self, text: str):
         words = self.create_word_list_from_text(text, self.config.min_word_size)
@@ -56,7 +69,9 @@ class ScriptVocab:
                 lines = f.readlines()
                 cleaned_lines = self.clean_up(lines)
                 for line in cleaned_lines:
-                    words = self.create_word_list_from_text(line, self.config.min_word_size)
+                    words = self.create_word_list_from_text(
+                        line, self.config.min_word_size
+                    )
                     self.all_words.extend(words)
 
     def has_no_text(self, line) -> bool:
@@ -90,31 +105,62 @@ class ScriptVocab:
     def translate_chunk(self, chunk, input_lang, target_lang, wait_time=2) -> list[str]:
         translated_chunk = []
         for attempt in range(2):
-            print(f"Attempt {attempt + 1}...")
             try:
-                translated_chunk = str(ts.translate_text(
-                    "\n".join(chunk),
-                    translator="bing",
-                    from_language=input_lang,
-                    to_language=target_lang,
-                )).split("\n")
-            except Exception as e:
+                translated_chunk = self.translate_text(chunk, input_lang, target_lang)
+                break
+            except ScriptVocab.ExternalTranslationError as e:
                 if attempt < 1:
                     print(f"Translation failed. Retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
                 else:
-                    raise Exception(f"Translation failed, error: {e}\nTry again later.")
+                    raise ScriptVocab.ExternalTranslationError(
+                        f"Translation failed, error: {e}\nTry again later."
+                    ) from e
         return translated_chunk
 
-    def convert_to_chunks(self, list:list[str], chunk_size:int):
-        for i in range(0, len(list), chunk_size):
-            yield list[i : i + chunk_size]
+    def translate_text(self, chunk: list, input_lang, target_lang):
+        translated_chunk = []
+        if self.is_internet_available():
+            if not self._translators_imported:
+                # Try to import the module only once
+                try:
+                    import translators as ts  # pylint: disable=import-outside-toplevel
+                    self._translators_imported = True
+                except ImportError:
+                    self._translators_imported = False
+                    print("Failed to import translators module.")
+            if self._translators_imported:
+                try:
+                    print("here")
+                    translated_chunk = str(
+                        ts.translate_text(
+                            "\n".join(chunk),
+                            translator="bing",
+                            from_language=input_lang,
+                            to_language=target_lang,
+                        )
+                    ).split("\n")
+                    return translated_chunk
+                except Exception as e:
+                    raise ScriptVocab.ExternalTranslationError("Translation failed") from e
+        print("You are offline, using offline translation")
+        for _ in chunk:
+            translated_chunk.append("placeholder")
+        return translated_chunk
 
-    def translate_dictionary(self, dictionary: dict[str,int], source_language, target_language, chunk_size):
-        translated_dict: dict[str,str] = {}
+    def convert_to_chunks(self, words_list: list[str], chunk_size: int) -> list[list[str]]:
+        return [words_list[i : i + chunk_size] for i in range(0, len(words_list), chunk_size)]
+
+    def translate_dictionary(
+        self, dictionary: dict[str, int], source_language, target_language, chunk_size
+    ):
+        translated_dict: dict[str, str] = {}
         chunks = self.convert_to_chunks(list(dictionary.keys()), chunk_size)
         for chunk in chunks:
-            translated_words = self.translate_chunk(chunk, source_language, target_language)
+            print(f"Translating chunk {chunks.index(chunk) + 1}")
+            translated_words = self.translate_chunk(
+                chunk, source_language, target_language
+            )
             translated_dict.update(dict(zip(chunk, translated_words)))
             time.sleep(2)  # rate limiter
         return translated_dict
@@ -127,11 +173,16 @@ class ScriptVocab:
         return dict(sorted(word_counts.items(), key=lambda item: item[1], reverse=True))
 
     def run(self):
-        words_dict: dict[str,int] = self.create_dictionary(self.all_words, self.config.min_appearance)
+        words_dict: dict[str, int] = self.create_dictionary(
+            self.all_words, self.config.min_appearance
+        )
         print(f"Found {len(words_dict)} unique words")
 
         translated_dict = self.translate_dictionary(
-            words_dict, self.config.subs_language, self.config.target_language, CHUNK_SIZE
+            words_dict,
+            self.config.subs_language,
+            self.config.target_language,
+            CHUNK_SIZE,
         )
 
         for word, count in words_dict.items():
@@ -139,7 +190,7 @@ class ScriptVocab:
             self.output.append(f"{count}, {word}, {translation}")
 
     def save_output_to_file(self, output_file):
-        with open(output_file, "w") as f:
+        with open(output_file, "w", encoding="UTF-8") as f:
             if len(self.output) > 0:
                 f.write("Count, Word, Translation\n")
                 for line in self.output:
@@ -151,7 +202,7 @@ class ScriptVocab:
         for line in self.output:
             line_items = line.split(",")
             if len(line_items) != 3:
-                print(f"Error occurred while parsing output: Invalid number of items in line: {line}")
+                print(f"Error: Invalid number of items in line: {line}")
                 return None
 
             occurrences = line_items[0].strip()
@@ -165,3 +216,6 @@ class ScriptVocab:
             }
             response.append(obj)
         return response
+
+    class ExternalTranslationError(Exception):
+        pass

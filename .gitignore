@@ -8,3 +8,4 @@
 settings.json
 *coverage*
 __pycache__
+.venv
