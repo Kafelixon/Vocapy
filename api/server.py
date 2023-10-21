@@ -1,3 +1,18 @@
+"""
+This module contains a FastAPI server that provides an endpoint 
+for translating text from one language to another using ScriptVocab.
+
+The server provides a POST endpoint at /translate that accepts the following parameters:
+- text: Text to translate.
+- file: File containing text to translate.
+- subs_language: Language of the text to translate.
+- target_language: Language to translate the text to.
+- min_word_size: Minimum size of a word to be included in the translation.
+- min_appearance: Minimum number of times a word must appear to be included in the translation.
+
+The endpoint returns a JSON response containing the translated text.
+"""
+
 from typing import Annotated
 
 from fastapi import FastAPI, Form, UploadFile
@@ -26,6 +41,29 @@ async def translate_text(
     min_word_size: Annotated[int, Form()] = 2,
     min_appearance: Annotated[int, Form()] = 1
 ):
+    """
+    Translates text from one language to another using ScriptVocab.
+
+    Args:
+        text (Annotated[str, Form()], optional): Defaults to "".
+            Text to translate.
+        file (UploadFile | None, optional): Defaults to None.
+            File containing text to translate.
+        subs_language (Annotated[str, Form()], optional): Defaults to "auto".
+            Language of the text to translate.
+        target_language (Annotated[str, Form()], optional): Defaults to "en".
+            Language to translate the text to.
+        min_word_size (Annotated[int, Form()], optional): Defaults to 2.
+            Minimum size of a word to be included in the translation.
+        min_appearance (Annotated[int, Form()], optional): Defaults to 1.
+            Minimum number of times a word must appear to be included in the translation.
+
+    Raises:
+        ValueError: If no text or file is provided.
+
+    Returns:
+        JSONResponse: JSON response containing the translated text.
+    """
     config = ScriptVocabConfig(
         subs_language=subs_language,
         target_language=target_language,
@@ -41,6 +79,16 @@ async def translate_text(
     return process_text(config, text)
 
 def process_text(config: ScriptVocabConfig, text: str):
+    """
+    Processes the text using ScriptVocab.
+
+    Args:
+        config (ScriptVocabConfig): Configuration for ScriptVocab.
+        text (str): Text to process.
+
+    Returns:
+        JSONResponse: JSON response containing the processed text.
+    """
     with ScriptVocab(config) as script_vocab:
         script_vocab.input_text(text)
         print("Running script", script_vocab.all_words)
