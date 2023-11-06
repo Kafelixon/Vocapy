@@ -19,6 +19,7 @@ import socket
 import time
 from collections import Counter
 from pathlib import Path
+from deep_translator import GoogleTranslator
 
 CHUNK_SIZE = 100
 
@@ -29,11 +30,11 @@ class ScriptVocabConfig:
 
     Attributes:
         subs_language (str): Defaults to "auto".
-            The language of the subtitles. 
+            The language of the subtitles.
         target_language (str): Defaults to "en".
-            The target language for vocabulary extraction. 
+            The target language for vocabulary extraction.
         min_word_size (int): Defaults to 1.
-            The minimum length of a word to be included in the vocabulary. 
+            The minimum length of a word to be included in the vocabulary.
         min_appearance (int): Defaults to 4.
             The minimum number of times a word must appear to be included in the vocabulary.
     """
@@ -66,27 +67,27 @@ class ScriptVocab:
         __enter__(self): Returns the instance of the ScriptVocab class.
         __exit__(exc_type, exc_value, traceback): Prints "Exiting".
 
-        is_internet_available(self) -> bool: 
+        is_internet_available(self) -> bool:
             Checks if the internet is available.
-        input_text(text: str): 
+        input_text(text: str):
             Processes input text and adds words to all_words.
-        input_files(path: str, input_extension: str, encoding: str): 
+        input_files(path: str, input_extension: str, encoding: str):
             Processes input files and adds words to all_words.
-        process_files(file_paths: list[str], encoding: str): 
+        process_files(file_paths: list[str], encoding: str):
             Processes a list of file paths and adds words to all_words.
-        has_no_text(line: str) -> bool: 
+        has_no_text(line: str) -> bool:
             Checks if a line has no text.
-        is_lowercase_letter_or_comma(char: str) -> bool: 
+        is_lowercase_letter_or_comma(char: str) -> bool:
             Checks if a character is a lowercase letter or comma.
-        clean_up(lines: list[str]) -> list[str]: 
+        clean_up(lines: list[str]) -> list[str]:
             Cleans up lines of text.
-        create_word_list_from_text(text: str, min_word_size: int) -> list[str]: 
+        create_word_list_from_text(text: str, min_word_size: int) -> list[str]:
             Creates a list of words from text.
         translate_chunk(chunk: list[str], input_lang: str, target_lang: str, wait_time: int = 2
             ) -> list[str]: Translates a chunk of text.
-        translate_text(chunk: list[str], input_lang: str, target_lang: str) -> list[str]: 
+        translate_text(chunk: list[str], input_lang: str, target_lang: str) -> list[str]:
             Translates text using the translators module.
-        convert_to_chunks(words_list: list[str], chunk_size: int) -> list[list[str]]: 
+        convert_to_chunks(words_list: list[str], chunk_size: int) -> list[list[str]]:
             Converts a list of words into chunks.
         translate_dictionary(
             dictionary: dict[str, int],
@@ -106,7 +107,6 @@ class ScriptVocab:
         self.config = config
         self.all_words: list[str] = []
         self.output: list[str] = []
-        self._translators_imported: bool = False
 
     def __enter__(self):
         """
@@ -131,6 +131,7 @@ class ScriptVocab:
             sock = socket.create_connection(("www.google.com", 80))
             if sock is not None:
                 sock.close()
+            print("isInternetAvailable succeeded")
             return True
         except OSError:
             pass
@@ -181,9 +182,7 @@ class ScriptVocab:
                 lines = f.readlines()
                 cleaned_lines = self.clean_up(lines)
                 for line in cleaned_lines:
-                    words = self.create_word_list_from_text(
-                        line, self.config.min_word_size
-                    )
+                    words = self.create_word_list_from_text(line, self.config.min_word_size)
                     self.all_words.extend(words)
 
     def has_no_text(self, line: str) -> bool:
@@ -225,9 +224,7 @@ class ScriptVocab:
             list[str]: A list of cleaned up lines.
         """
         cleaner_lines = [
-            re.sub("<.*?>", "", line).rstrip()
-            for line in lines
-            if not self.has_no_text(line)
+            re.sub("<.*?>", "", line).rstrip() for line in lines if not self.has_no_text(line)
         ]
         for i in range(1, len(cleaner_lines)):
             if self.is_lowercase_letter_or_comma(cleaner_lines[i][0]):
@@ -281,9 +278,7 @@ class ScriptVocab:
                     ) from e
         return translated_chunk
 
-    def translate_text(
-        self, chunk: list[str], input_lang: str, target_lang: str
-    ) -> list[str]:
+    def translate_text(self, chunk: list[str], input_lang: str, target_lang: str) -> list[str]:
         """
         Translates text using the translators module.
 
@@ -297,37 +292,21 @@ class ScriptVocab:
         """
         translated_chunk = []
         if self.is_internet_available():
-            if not self._translators_imported:
-                # Try to import the module only once
-                try:
-                    import translators as ts  # pylint: disable=import-outside-toplevel
-                    self._translators_imported = True
-                except ImportError:
-                    self._translators_imported = False
-                    print("Failed to import translators module.")
-            if self._translators_imported:
-                try:
-                    translated_chunk = str(
-                        ts.translate_text(
-                            "\n".join(chunk),
-                            translator="bing",
-                            from_language=input_lang,
-                            to_language=target_lang,
-                        )
-                    ).split("\n")
-                    return translated_chunk
-                except Exception as e:
-                    raise ScriptVocab.ExternalTranslationError(
-                        "Translation failed"
-                    ) from e
+            try:
+                translated_chunk = str(
+                    GoogleTranslator(
+                        source=input_lang, target=target_lang
+                    ).translate("\n".join(chunk))
+                ).split("\n")
+                return translated_chunk
+            except Exception as e:
+                raise ScriptVocab.ExternalTranslationError("Translation failed") from e
         print("You are offline, using offline translation")
         for _ in chunk:
             translated_chunk.append("placeholder")
         return translated_chunk
 
-    def convert_to_chunks(
-        self, words_list: list[str], chunk_size: int
-    ) -> list[list[str]]:
+    def convert_to_chunks(self, words_list: list[str], chunk_size: int) -> list[list[str]]:
         """
         Converts a list of words into chunks.
 
@@ -338,10 +317,7 @@ class ScriptVocab:
         Returns:
             list[list[str]]: A list of chunks.
         """
-        return [
-            words_list[i : i + chunk_size]
-            for i in range(0, len(words_list), chunk_size)
-        ]
+        return [words_list[i : i + chunk_size] for i in range(0, len(words_list), chunk_size)]
 
     def translate_dictionary(
         self,
@@ -374,9 +350,7 @@ class ScriptVocab:
 
         for chunk in chunks:
             print(f"Translating chunk {chunks.index(chunk) + 1}")
-            translated_words = self.translate_chunk(
-                chunk, source_language, target_language
-            )
+            translated_words = self.translate_chunk(chunk, source_language, target_language)
             translated_dict.update(dict(zip(chunk, translated_words)))
             time.sleep(2)  # rate limiter
         return translated_dict
@@ -386,25 +360,23 @@ class ScriptVocab:
         Create a dictionary of words and their counts from a list of words.
 
         Args:
-            words (list): 
+            words (list):
                 A list of words to count.
-            min_appearance (int): 
+            min_appearance (int):
                 The minimum number of times a word must appear to be included in the dictionary.
 
         Returns:
             dict: A dictionary of words and their counts, sorted by count in descending order.
         """
         word_count = Counter(words)
-        word_counts = {
-            word: count for word, count in word_count.items() if count >= min_appearance
-        }
+        word_counts = {word: count for word, count in word_count.items() if count >= min_appearance}
         return dict(sorted(word_counts.items(), key=lambda item: item[1], reverse=True))
 
     def run(self):
         """
-            Runs the script, creating a dictionary of words and their counts, 
-            translating the dictionary, and appending the results to the output list.
-            """
+        Runs the script, creating a dictionary of words and their counts,
+        translating the dictionary, and appending the results to the output list.
+        """
         words_dict: dict[str, int] = self.create_dictionary(
             self.all_words, self.config.min_appearance
         )

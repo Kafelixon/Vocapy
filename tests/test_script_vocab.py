@@ -150,7 +150,9 @@ class TestScriptVocab(unittest.TestCase):
         expected = {"example": 3, "test": 2}
         self.assertEqual(self.sv.create_dictionary(words, 2), expected)
 
-    @patch("translators.translate_text")
+    # TODO: Add test for creation of the GoogleTranslator object.
+
+    @patch("deep_translator.GoogleTranslator.translate")
     @patch("time.sleep")
     def test_translate_chunk(self, sleep_mock, mock_translate_text):
         mock_translate_text.return_value = "Esto es una prueba."
@@ -160,16 +162,13 @@ class TestScriptVocab(unittest.TestCase):
 
         translated_chunk = self.sv.translate_chunk(chunk, input_lang, target_lang)
         mock_translate_text.assert_called_with(
-            "\n".join(chunk),
-            translator="bing",
-            from_language=input_lang,
-            to_language=target_lang,
+            "\n".join(chunk)
         )
         self.assertEqual(len(translated_chunk), 1)
         self.assertEqual(translated_chunk[0], "Esto es una prueba.")
         self.assertEqual(sleep_mock.call_count, 0)
 
-    @patch("translators.translate_text")
+    @patch("deep_translator.GoogleTranslator.translate")
     @patch("time.sleep")
     def test_translate_chunk_throws_exception(self, sleep_mock, mock_translate_text):
         mock_translate_text.side_effect = Exception("Test Exception")
@@ -185,10 +184,7 @@ class TestScriptVocab(unittest.TestCase):
             target_lang,
         )
         mock_translate_text.assert_called_with(
-            "\n".join(chunk),
-            translator="bing",
-            from_language=input_lang,
-            to_language=target_lang,
+            "\n".join(chunk)
         )
         self.assertEqual(sleep_mock.call_count, 1)
 
@@ -292,7 +288,8 @@ class TestScriptVocab(unittest.TestCase):
     def test_save_output_to_file_no_output(self):
         """
         Test that the output is saved to a file correctly.
-        Sets the output of the ScriptVocab instance to an empty list of strings, then saves it to a file.
+        Sets the output of the ScriptVocab instance to an empty list of strings,
+        then saves it to a file.
         Reads the contents of the file and asserts that it is empty.
         """
         self.sv.save_output_to_file(TEMP_TEST_FILE_SAVE)
