@@ -1,10 +1,10 @@
 """
-This module defines the ScriptVocab and ScriptVocabConfig classes 
+This module defines the Vocapy and VocapyConfig classes 
 for processing text files and creating a vocabulary of words.
 
 Classes:
-    ScriptVocab: A class for processing text files and creating a vocabulary of words.
-    ScriptVocabConfig: A configuration object for the ScriptVocab class.
+    Vocapy: A class for processing text files and creating a vocabulary of words.
+    VocapyConfig: A configuration object for the Vocapy class.
 
 Constants:
     CHUNK_SIZE (int): The size of the chunks used for translating text.
@@ -18,15 +18,18 @@ import re
 import socket
 import time
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
+
 from deep_translator import GoogleTranslator
 
 CHUNK_SIZE = 100
 
 
-class ScriptVocabConfig:
+@dataclass
+class VocapyConfig:
     """
-    A configuration object for the ScriptVocab class.
+    A configuration object for the Vocapy class.
 
     Attributes:
         subs_language (str): Defaults to "auto".
@@ -39,32 +42,25 @@ class ScriptVocabConfig:
             The minimum number of times a word must appear to be included in the vocabulary.
     """
 
-    def __init__(
-        self,
-        subs_language="auto",
-        target_language="en",
-        min_word_size=1,
-        min_appearance=4,
-    ):
-        self.subs_language = subs_language
-        self.target_language = target_language
-        self.min_word_size = min_word_size
-        self.min_appearance = min_appearance
+    subs_language: str = "auto"
+    target_language: str = "en"
+    min_word_size: int = 1
+    min_appearance: int = 4
 
 
-class ScriptVocab:
+class Vocapy:
     """
     A class for processing text files and creating a vocabulary of words.
 
     Attributes:
-        config (ScriptVocabConfig): An instance of ScriptVocabConfig class.
+        config (VocapyConfig): An instance of VocapyConfig class.
         all_words (list[str]): A list of all words found in the input text.
         output (list[str]): A list of translated words.
         _translators_imported (bool): A flag to check if the translators module is imported.
 
     Methods:
-        __init__(config: ScriptVocabConfig): Initializes the ScriptVocab class.
-        __enter__(self): Returns the instance of the ScriptVocab class.
+        __init__(config: VocapyConfig): Initializes the Vocapy class.
+        __enter__(self): Returns the instance of the Vocapy class.
         __exit__(exc_type, exc_value, traceback): Prints "Exiting".
 
         is_internet_available(self) -> bool:
@@ -97,12 +93,12 @@ class ScriptVocab:
             ) -> dict[str, str]: Translates a dictionary of words.
     """
 
-    def __init__(self, config: ScriptVocabConfig):
+    def __init__(self, config: VocapyConfig):
         """
-        Initializes the ScriptVocab class.
+        Initializes the Vocapy class.
 
         Args:
-            config (ScriptVocabConfig): An instance of ScriptVocabConfig class.
+            config (VocapyConfig): An instance of VocapyConfig class.
         """
         self.config = config
         self.all_words: list[str] = []
@@ -110,7 +106,7 @@ class ScriptVocab:
 
     def __enter__(self):
         """
-        Returns the instance of the ScriptVocab class.
+        Returns the instance of the Vocapy class.
         """
         return self
 
@@ -268,12 +264,12 @@ class ScriptVocab:
             try:
                 translated_chunk = self.translate_text(chunk, input_lang, target_lang)
                 break
-            except ScriptVocab.ExternalTranslationError as e:
+            except Vocapy.ExternalTranslationError as e:
                 if attempt < 1:
                     print(f"Translation failed. Retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
                 else:
-                    raise ScriptVocab.ExternalTranslationError(
+                    raise Vocapy.ExternalTranslationError(
                         f"Translation failed, error: {e}\nTry again later."
                     ) from e
         return translated_chunk
@@ -294,13 +290,13 @@ class ScriptVocab:
         if self.is_internet_available():
             try:
                 translated_chunk = str(
-                    GoogleTranslator(
-                        source=input_lang, target=target_lang
-                    ).translate("\n".join(chunk))
+                    GoogleTranslator(source=input_lang, target=target_lang).translate(
+                        "\n".join(chunk)
+                    )
                 ).split("\n")
                 return translated_chunk
             except Exception as e:
-                raise ScriptVocab.ExternalTranslationError("Translation failed") from e
+                raise Vocapy.ExternalTranslationError("Translation failed") from e
         print("You are offline, using offline translation")
         for _ in chunk:
             translated_chunk.append("placeholder")
@@ -412,7 +408,7 @@ class ScriptVocab:
 
     def get_output_as_json(self):
         """
-        Converts the output of the ScriptVocab program to a dictionary in JSON format.
+        Converts the output of the Vocapy program to a dictionary in JSON format.
 
         Returns:
             A list of entries, where each entry represents a.
