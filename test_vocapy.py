@@ -4,20 +4,20 @@ from pathlib import Path
 from unittest.mock import patch
 import builtins
 
-from script_vocab import ScriptVocab, ScriptVocabConfig
+from vocapy import Vocapy, VocapyConfig
 
 TEMP_TEST_DIR = "/tmp/dir/"
 TEMP_TEST_FILE_LOAD = TEMP_TEST_DIR + "test_load.txt"
 TEMP_TEST_FILE_SAVE = TEMP_TEST_DIR + "test_save.txt"
 
 
-class TestScriptVocab(unittest.TestCase):
+class TestVocapy(unittest.TestCase):
     def setUp(self):
         os.makedirs(TEMP_TEST_DIR, exist_ok=True)
         Path(TEMP_TEST_FILE_LOAD).write_text("This is a test.", encoding="UTF-8")
 
-        self.config = ScriptVocabConfig()
-        self.sv = ScriptVocab(self.config)
+        self.config = VocapyConfig()
+        self.sv = Vocapy(self.config)
 
     def tearDown(self):
         Path(TEMP_TEST_FILE_LOAD).unlink(missing_ok=True)
@@ -26,8 +26,8 @@ class TestScriptVocab(unittest.TestCase):
 
     def test_enter_and_exit(self):
         with patch.object(builtins, "print") as mock_print:
-            with ScriptVocab(ScriptVocabConfig()) as test_sv:
-                self.assertIsInstance(test_sv, ScriptVocab)
+            with Vocapy(VocapyConfig()) as test_sv:
+                self.assertIsInstance(test_sv, Vocapy)
         mock_print.assert_any_call("Exiting")
 
     def test_input_text(self):
@@ -177,7 +177,7 @@ class TestScriptVocab(unittest.TestCase):
         target_lang = "en"
 
         self.assertRaises(
-            ScriptVocab.ExternalTranslationError,
+            Vocapy.ExternalTranslationError,
             self.sv.translate_chunk,
             chunk,
             input_lang,
@@ -188,7 +188,7 @@ class TestScriptVocab(unittest.TestCase):
         )
         self.assertEqual(sleep_mock.call_count, 1)
 
-    @patch("script_vocab.ScriptVocab.translate_chunk")
+    @patch("vocapy.Vocapy.translate_chunk")
     @patch("time.sleep")
     def test_translate_dictionary(self, sleep_mock, translate_chunk_mock):
         translate_chunk_mock.return_value = ["word1", "word2", "word3"]
@@ -211,7 +211,7 @@ class TestScriptVocab(unittest.TestCase):
         self.assertEqual(result, expected_result)
         self.assertEqual(sleep_mock.call_count, 1)
 
-    @patch("script_vocab.ScriptVocab.translate_chunk")
+    @patch("vocapy.Vocapy.translate_chunk")
     @patch("time.sleep")
     def test_translate_dictionary_waiting(self, sleep_mock, translate_chunk_mock):
         translate_chunk_mock.return_value = ["word1", "word2"]
@@ -232,8 +232,8 @@ class TestScriptVocab(unittest.TestCase):
         self.assertEqual(translate_chunk_mock.call_count, 2)
         self.assertEqual(sleep_mock.call_count, 2)
 
-    @patch("script_vocab.ScriptVocab.create_dictionary")
-    @patch("script_vocab.ScriptVocab.translate_dictionary")
+    @patch("vocapy.Vocapy.create_dictionary")
+    @patch("vocapy.Vocapy.translate_dictionary")
     def test_run(self, translate_dictionary_mock, create_dictionary_mock):
         create_dictionary_mock.return_value = {
             "palabra1": 5,
@@ -253,8 +253,8 @@ class TestScriptVocab(unittest.TestCase):
             ["5, palabra1, word1", "3, palabra2, word2", "1, palabra3, word3"],
         )
 
-    @patch("script_vocab.ScriptVocab.create_dictionary")
-    @patch("script_vocab.ScriptVocab.translate_dictionary")
+    @patch("vocapy.Vocapy.create_dictionary")
+    @patch("vocapy.Vocapy.translate_dictionary")
     def test_run_with_empty_input(
         self, translate_dictionary_mock, create_dictionary_mock
     ):
@@ -271,7 +271,7 @@ class TestScriptVocab(unittest.TestCase):
     def test_save_output_to_file(self):
         """
         Test that the output is saved to a file correctly.
-        Sets the output of the ScriptVocab instance to a list of strings, then saves it to a file.
+        Sets the output of the Vocapy instance to a list of strings, then saves it to a file.
         Reads the contents of the file and asserts that it matches the expected output format.
         """
         self.sv.output = [
@@ -288,7 +288,7 @@ class TestScriptVocab(unittest.TestCase):
     def test_save_output_to_file_no_output(self):
         """
         Test that the output is saved to a file correctly.
-        Sets the output of the ScriptVocab instance to an empty list of strings,
+        Sets the output of the Vocapy instance to an empty list of strings,
         then saves it to a file.
         Reads the contents of the file and asserts that it is empty.
         """

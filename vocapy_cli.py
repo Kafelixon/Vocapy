@@ -1,13 +1,11 @@
 import argparse
-from script_vocab.script_vocab import ScriptVocab, ScriptVocabConfig
+from vocapy import Vocapy, VocapyConfig
 
 
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "path", help="The path to the text file or directory to process."
-    )
+    parser.add_argument("path", help="The path to the text file or directory to process.")
     parser.add_argument(
         "-s",
         "--subs_language",
@@ -50,17 +48,17 @@ def main():
         "-e",
         "--encoding",
         default="utf-8",
-        help="The encoding of the text file. Default is 'utf-8'. If you see a lot of [?]s replacing characters, try 'cp1252'.",
+        help="The encoding of the text file. Default is 'utf-8'.",
     )
 
     args = parser.parse_args()
-    script_vocab_config = ScriptVocabConfig(
+    vocapy_config = VocapyConfig(
         subs_language=args.subs_language,
         target_language=args.target_language,
         min_word_size=args.min_word_size,
         min_appearance=args.min_appearance,
     )
-    translator = ScriptVocab(script_vocab_config)
+    translator = Vocapy(vocapy_config)
     translator.input_files(args.path, args.input_extension, args.encoding)
     translator.run()
     translator.save_output_to_file(args.output)
